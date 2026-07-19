@@ -1,158 +1,265 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<string>("");
 
-  function openCamera() {
+  const [selectedFile, setSelectedFile] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("archzen-theme");
+
+    if (savedTheme === "dark") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  function toggleTheme() {
+    const nextTheme = !darkMode;
+
+    setDarkMode(nextTheme);
+
+    if (nextTheme) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("archzen-theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("archzen-theme", "light");
+    }
+  }
+
+  function openCardScanner() {
     fileInputRef.current?.click();
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
-    if (file) {
-      setSelectedFile(file.name);
+    if (!file) {
+      return;
     }
+
+    setSelectedFile(file.name);
   }
 
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
-          <div className="brand">
-            <div className="brand-mark">A</div>
+        <div className="brand">
+          <div className="brand-mark">
+            <span>A</span>
+          </div>
 
-            <div>
-              <h1>ArchZen Connect</h1>
-              <p>Your AI networking assistant</p>
-            </div>
+          <div>
+            <h1>ArchZen Connect</h1>
+            <p>Your AI networking assistant</p>
           </div>
         </div>
 
-        <button className="profile-button" type="button">
-          ES
-        </button>
+        <div className="topbar-actions">
+          <button
+            type="button"
+            className="theme-button"
+            onClick={toggleTheme}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
+
+          <button className="profile-button" type="button">
+            ES
+          </button>
+        </div>
       </header>
 
-      <section className="welcome-section">
-        <div>
-          <p className="eyebrow">YOUR NETWORK</p>
-          <h2>Good morning, Esh 👋</h2>
-          <p className="welcome-copy">
-            Keep every person you meet, every conversation and every follow-up
-            organised in one private place.
+      <section className="hero-section">
+        <div className="hero-copy">
+          <p className="eyebrow">ARCHZEN CONNECT</p>
+
+          <h2>Turn business cards into business relationships.</h2>
+
+          <p className="hero-description">
+            Scan a card, remember the conversation, prepare a personal email and
+            never lose another valuable connection.
           </p>
+
+          <div className="hero-actions">
+            <button className="primary-button" onClick={openCardScanner}>
+              <span>📷</span>
+              Scan a business card
+            </button>
+
+            <button className="secondary-outline-button" type="button">
+              View people
+            </button>
+          </div>
         </div>
 
-        <button className="primary-button desktop-scan" onClick={openCamera}>
-          <span>＋</span>
-          Scan a business card
+        <button className="hero-scan-card" onClick={openCardScanner}>
+          <div className="scanner-visual">
+            <div className="scanner-corner scanner-top-left" />
+            <div className="scanner-corner scanner-top-right" />
+            <div className="scanner-corner scanner-bottom-left" />
+            <div className="scanner-corner scanner-bottom-right" />
+
+            <div className="scanner-icon">📇</div>
+            <div className="scanner-line" />
+          </div>
+
+          <div>
+            <span className="scan-label">QUICK ACTION</span>
+            <h3>Scan Business Card</h3>
+            <p>Take a photo or choose an existing image.</p>
+          </div>
+
+          <span className="scan-arrow">→</span>
         </button>
       </section>
 
       <section className="stats-grid">
         <article className="stat-card">
           <div className="stat-icon">👥</div>
+
           <div>
-            <span>Total contacts</span>
+            <span>People</span>
             <strong>0</strong>
+            <small>Saved connections</small>
           </div>
         </article>
 
         <article className="stat-card">
-          <div className="stat-icon">✉️</div>
+          <div className="stat-icon">✨</div>
+
           <div>
-            <span>Draft emails</span>
+            <span>AI Drafts</span>
             <strong>0</strong>
+            <small>Ready for review</small>
           </div>
         </article>
 
         <article className="stat-card">
-          <div className="stat-icon">⏰</div>
+          <div className="stat-icon">✅</div>
+
           <div>
-            <span>Follow-ups</span>
+            <span>Tasks</span>
             <strong>0</strong>
+            <small>Follow-ups due</small>
+          </div>
+        </article>
+
+        <article className="stat-card">
+          <div className="stat-icon">⏱️</div>
+
+          <div>
+            <span>Time saved</span>
+            <strong>0h</strong>
+            <small>Through automation</small>
           </div>
         </article>
       </section>
 
-      <section className="action-grid">
-        <button className="action-card scan-card" onClick={openCamera}>
-          <div className="action-icon">📷</div>
-
+      <section className="section-block">
+        <div className="section-heading">
           <div>
-            <h3>Scan business card</h3>
-            <p>Take a photo or upload an existing card.</p>
+            <p className="eyebrow">YOUR WORKSPACE</p>
+            <h3>Everything you need after meeting someone.</h3>
           </div>
+        </div>
 
-          <span className="arrow">→</span>
-        </button>
+        <div className="action-grid">
+          <button className="action-card dark-action" onClick={openCardScanner}>
+            <div className="action-icon">📷</div>
 
-        <button className="action-card">
-          <div className="action-icon">👤</div>
+            <div>
+              <h4>Scan a card</h4>
+              <p>Capture contact details from a visiting card.</p>
+            </div>
 
-          <div>
-            <h3>My contacts</h3>
-            <p>Search and review everyone you have met.</p>
-          </div>
+            <span className="arrow">→</span>
+          </button>
 
-          <span className="arrow">→</span>
-        </button>
+          <button className="action-card" type="button">
+            <div className="action-icon">👤</div>
 
-        <button className="action-card">
-          <div className="action-icon">✉️</div>
+            <div>
+              <h4>People</h4>
+              <p>Search every person, company and conversation.</p>
+            </div>
 
-          <div>
-            <h3>Email drafts</h3>
-            <p>Review personalised messages before sending.</p>
-          </div>
+            <span className="arrow">→</span>
+          </button>
 
-          <span className="arrow">→</span>
-        </button>
+          <button className="action-card" type="button">
+            <div className="action-icon">✨</div>
 
-        <button className="action-card">
-          <div className="action-icon">🔔</div>
+            <div>
+              <h4>AI Drafts</h4>
+              <p>Review personal follow-up emails before sending.</p>
+            </div>
 
-          <div>
-            <h3>Follow-ups</h3>
-            <p>Never forget to reconnect with someone.</p>
-          </div>
+            <span className="arrow">→</span>
+          </button>
 
-          <span className="arrow">→</span>
-        </button>
+          <button className="action-card" type="button">
+            <div className="action-icon">🔔</div>
+
+            <div>
+              <h4>Tasks</h4>
+              <p>See reminders and upcoming follow-ups.</p>
+            </div>
+
+            <span className="arrow">→</span>
+          </button>
+        </div>
       </section>
 
       <section className="activity-panel">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">RECENT ACTIVITY</p>
-            <h3>Your latest connections</h3>
+            <p className="eyebrow">RECENT CONNECTIONS</p>
+            <h3>Your latest people</h3>
           </div>
 
-          <button className="text-button">View all</button>
+          <button className="text-button" type="button">
+            View all
+          </button>
         </div>
 
         <div className="empty-state">
           <div className="empty-icon">📇</div>
-          <h4>No contacts yet</h4>
-          <p>Scan your first business card to start building your network.</p>
-          <button className="secondary-button" onClick={openCamera}>
-            Scan first card
+
+          <h4>Your network starts here</h4>
+
+          <p>
+            Scan your first business card and ArchZen Connect will prepare the
+            contact details for your review.
+          </p>
+
+          <button className="secondary-button" onClick={openCardScanner}>
+            Scan your first card
           </button>
         </div>
       </section>
 
       {selectedFile && (
         <div className="file-notice">
-          <span>✓</span>
-          Card selected: <strong>{selectedFile}</strong>
+          <span className="success-icon">✓</span>
+
+          <div>
+            <small>Business card selected</small>
+            <strong>{selectedFile}</strong>
+          </div>
+
+          <button type="button" onClick={() => setSelectedFile("")}>
+            ×
+          </button>
         </div>
       )}
 
-      <button className="mobile-scan-button" onClick={openCamera}>
+      <button className="mobile-scan-button" onClick={openCardScanner}>
         <span>📷</span>
         Scan card
       </button>
