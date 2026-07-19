@@ -60,11 +60,11 @@ export default function ScanPage() {
       return;
     }
 
-    const maximumFileSize = 10 * 1024 * 1024;
+    const maximumFileSize = 4 * 1024 * 1024;
 
     if (file.size > maximumFileSize) {
       setErrorMessage(
-        "The business card image must be smaller than 10 MB."
+        "The business card image must be smaller than 4 MB."
       );
       return;
     }
