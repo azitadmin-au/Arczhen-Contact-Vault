@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 type ContactDetails = {
   fullName: string;
@@ -41,6 +42,8 @@ export default function ScanPage() {
   const [isReading, setIsReading] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   function openCardScanner() {
     fileInputRef.current?.click();
@@ -70,6 +73,7 @@ export default function ScanPage() {
     }
 
     setErrorMessage("");
+    setSuccessMessage("");
     setSelectedFile(file);
     setFileName(file.name);
     setShowReview(false);
@@ -97,6 +101,7 @@ export default function ScanPage() {
     try {
       setIsReading(true);
       setErrorMessage("");
+      setSuccessMessage("");
       setShowReview(false);
 
       const formData = new FormData();
@@ -176,6 +181,7 @@ try {
     setShowReview(false);
     setIsReading(false);
     setErrorMessage("");
+    setSuccessMessage("");
     setContact(initialContact);
 
     if (fileInputRef.current) {
@@ -183,7 +189,7 @@ try {
     }
   }
 
-  function saveContact() {
+  async function saveContact() {
     if (!contact.fullName.trim()) {
       setErrorMessage(
         "Please enter the person’s full name."
@@ -201,11 +207,50 @@ try {
       return;
     }
 
-    setErrorMessage("");
+    try {
+      setIsSaving(true);
+      setErrorMessage("");
+      setSuccessMessage("");
 
-    alert(
-      `${contact.fullName} is ready to save. We will connect Supabase next.`
-    );
+      const { data, error } = await supabase
+        .from("contacts")
+        .insert({
+          full_name: contact.fullName.trim(),
+          company: contact.company.trim() || null,
+          job_title: contact.jobTitle.trim() || null,
+          email:
+            contact.email.trim().toLowerCase() ||
+            null,
+          phone: contact.phone.trim() || null,
+          website: contact.website.trim() || null,
+          address: contact.address.trim() || null,
+          met_at: contact.metAt || null,
+          notes: contact.notes.trim() || null,
+          email_sent: false,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      console.log("Saved contact:", data);
+
+      setSuccessMessage(
+        "Contact saved successfully."
+      );
+    } catch (error) {
+      console.error("Save contact error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "The contact could not be saved."
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -567,6 +612,20 @@ try {
                 />
               </label>
 
+              {successMessage && (
+                <div className="reading-success">
+                  <span>✓</span>
+
+                  <div>
+                    <strong>{successMessage}</strong>
+
+                    <p>
+                      The contact is now stored in ArchZen Connect.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="form-actions">
                 <button
                   type="button"
@@ -579,8 +638,11 @@ try {
                 <button
                   type="submit"
                   className="save-contact-button"
+                  disabled={isSaving}
                 >
-                  Save contact →
+                  {isSaving
+                    ? "Saving contact..."
+                    : "Save contact →"}
                 </button>
               </div>
             </form>
