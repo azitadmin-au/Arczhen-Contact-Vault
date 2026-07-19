@@ -107,8 +107,19 @@ export default function ScanPage() {
         body: formData,
       });
 
-      const result = await response.json();
+     const responseText = await response.text();
 
+let result: any;
+
+try {
+  result = JSON.parse(responseText);
+} catch {
+  throw new Error(
+    response.status === 413
+      ? "This photo is too large. Please upload an image smaller than 4 MB."
+      : responseText || "The server returned an unexpected response."
+  );
+}
       if (!response.ok) {
         throw new Error(
           result?.error ||
