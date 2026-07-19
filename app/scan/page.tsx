@@ -31,17 +31,24 @@ export default function ScanPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [fileName, setFileName] = useState("");
-  const [contact, setContact] = useState<ContactDetails>(initialContact);
+
+  const [contact, setContact] =
+    useState<ContactDetails>(initialContact);
+
   const [isReading, setIsReading] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   function openCardScanner() {
     fileInputRef.current?.click();
   }
 
-  function handleImageSelection(event: ChangeEvent<HTMLInputElement>) {
+  function handleImageSelection(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -49,11 +56,24 @@ export default function ScanPage() {
     }
 
     if (!file.type.startsWith("image/")) {
-      alert("Please choose an image file.");
+      setErrorMessage("Please choose a valid image file.");
       return;
     }
 
+    const maximumFileSize = 10 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setErrorMessage(
+        "The business card image must be smaller than 10 MB."
+      );
+      return;
+    }
+
+    setErrorMessage("");
+    setSelectedFile(file);
     setFileName(file.name);
+    setShowReview(false);
+    setContact(initialContact);
 
     const reader = new FileReader();
 
@@ -61,34 +81,90 @@ export default function ScanPage() {
       setImagePreview(String(reader.result));
     };
 
+    reader.onerror = () => {
+      setErrorMessage("The selected image could not be opened.");
+    };
+
     reader.readAsDataURL(file);
   }
 
-  function handleReadCard() {
-    if (!imagePreview) {
-      alert("Please select a business card first.");
+  async function handleReadCard() {
+    if (!selectedFile) {
+      setErrorMessage("Please select a business card first.");
       return;
     }
 
-    setIsReading(true);
+    try {
+      setIsReading(true);
+      setErrorMessage("");
+      setShowReview(false);
 
-    window.setTimeout(() => {
-      setIsReading(false);
+      const formData = new FormData();
+      formData.append("card", selectedFile);
+
+      const response = await fetch("/api/read-card", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "The business card could not be read."
+        );
+      }
+
+      if (!result?.contact) {
+        throw new Error(
+          "No contact information was returned."
+        );
+      }
+
+      setContact({
+        fullName: result.contact.fullName || "",
+        company: result.contact.company || "",
+        jobTitle: result.contact.jobTitle || "",
+        email: result.contact.email || "",
+        phone: result.contact.phone || "",
+        website: result.contact.website || "",
+        address: result.contact.address || "",
+        metAt: "",
+        notes: "",
+      });
+
       setShowReview(true);
-    }, 1800);
+    } catch (error) {
+      console.error("Business card reading error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while reading the card."
+      );
+    } finally {
+      setIsReading(false);
+    }
   }
 
-  function updateContact(field: keyof ContactDetails, value: string) {
-    setContact((current) => ({
-      ...current,
+  function updateContact(
+    field: keyof ContactDetails,
+    value: string
+  ) {
+    setContact((currentContact) => ({
+      ...currentContact,
       [field]: value,
     }));
   }
 
   function removeImage() {
+    setSelectedFile(null);
     setImagePreview("");
     setFileName("");
     setShowReview(false);
+    setIsReading(false);
+    setErrorMessage("");
     setContact(initialContact);
 
     if (fileInputRef.current) {
@@ -98,17 +174,26 @@ export default function ScanPage() {
 
   function saveContact() {
     if (!contact.fullName.trim()) {
-      alert("Please enter the person’s name.");
+      setErrorMessage(
+        "Please enter the person’s full name."
+      );
       return;
     }
 
-    if (!contact.email.trim() && !contact.phone.trim()) {
-      alert("Please enter an email address or phone number.");
+    if (
+      !contact.email.trim() &&
+      !contact.phone.trim()
+    ) {
+      setErrorMessage(
+        "Please enter an email address or phone number."
+      );
       return;
     }
+
+    setErrorMessage("");
 
     alert(
-      `${contact.fullName} is ready to save. We will connect the database next.`
+      `${contact.fullName} is ready to save. We will connect Supabase next.`
     );
   }
 
@@ -124,14 +209,34 @@ export default function ScanPage() {
         </button>
 
         <div>
-          <p className="scan-eyebrow">ARCHZEN CONNECT</p>
+          <p className="scan-eyebrow">
+            ARCHZEN CONNECT
+          </p>
+
           <h1>Scan Business Card</h1>
+
           <p>
-            Take a clear photo of the card. You can check and edit everything
-            before saving.
+            Take a clear photo of the card. You can check
+            and edit everything before saving.
           </p>
         </div>
       </header>
+
+      {errorMessage && (
+        <div className="scan-error-message">
+          <span>⚠️</span>
+
+          <p>{errorMessage}</p>
+
+          <button
+            type="button"
+            onClick={() => setErrorMessage("")}
+            aria-label="Close error"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <section className="scan-layout">
         <article className="upload-panel">
@@ -140,21 +245,25 @@ export default function ScanPage() {
               type="button"
               className="upload-zone"
               onClick={openCardScanner}
+              disabled={isReading}
             >
               <div className="upload-icon">📷</div>
 
               <h2>Take or upload a photo</h2>
 
               <p>
-                Make sure the complete business card is visible and the text is
-                clear.
+                Make sure the complete business card is
+                visible and the text is clear.
               </p>
 
               <span>Choose business card</span>
             </button>
           ) : (
             <div className="card-preview">
-              <img src={imagePreview} alt="Selected business card" />
+              <img
+                src={imagePreview}
+                alt="Selected business card"
+              />
 
               <div className="preview-footer">
                 <div>
@@ -162,7 +271,11 @@ export default function ScanPage() {
                   <strong>{fileName}</strong>
                 </div>
 
-                <button type="button" onClick={removeImage}>
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  disabled={isReading}
+                >
                   Remove
                 </button>
               </div>
@@ -185,7 +298,9 @@ export default function ScanPage() {
               onClick={handleReadCard}
               disabled={isReading}
             >
-              {isReading ? "Reading business card..." : "Read business card"}
+              {isReading
+                ? "AI is reading the business card..."
+                : "Read business card with AI"}
             </button>
           )}
 
@@ -198,10 +313,24 @@ export default function ScanPage() {
               <p>Reading contact details...</p>
 
               <div className="reading-items">
-                <span>✓ Name</span>
-                <span>✓ Company</span>
-                <span>✓ Email</span>
-                <span>✓ Phone</span>
+                <span>Checking name</span>
+                <span>Checking company</span>
+                <span>Checking email</span>
+                <span>Checking phone</span>
+              </div>
+            </div>
+          )}
+
+          {showReview && (
+            <div className="reading-success">
+              <span>✓</span>
+
+              <div>
+                <strong>Card successfully read</strong>
+                <p>
+                  Check the extracted information before
+                  saving.
+                </p>
               </div>
             </div>
           )}
@@ -209,26 +338,43 @@ export default function ScanPage() {
 
         <article
           className={`review-panel ${
-            showReview ? "review-panel-visible" : ""
+            showReview
+              ? "review-panel-visible"
+              : ""
           }`}
         >
           <div className="review-heading">
             <div>
-              <p className="scan-eyebrow">REVIEW CONTACT</p>
+              <p className="scan-eyebrow">
+                REVIEW CONTACT
+              </p>
+
               <h2>Check the details</h2>
             </div>
 
             <span className="review-status">
-              {showReview ? "Ready for review" : "Waiting for card"}
+              {showReview
+                ? "Ready for review"
+                : isReading
+                  ? "AI is reading"
+                  : "Waiting for card"}
             </span>
           </div>
 
           {!showReview ? (
             <div className="review-empty">
-              <div>✨</div>
-              <h3>Contact details will appear here</h3>
+              <div>{isReading ? "🔎" : "✨"}</div>
+
+              <h3>
+                {isReading
+                  ? "AI is reading the card"
+                  : "Contact details will appear here"}
+              </h3>
+
               <p>
-                Upload a card and select “Read business card” to continue.
+                {isReading
+                  ? "This usually takes only a few seconds."
+                  : "Upload a card and select “Read business card with AI” to continue."}
               </p>
             </div>
           ) : (
@@ -242,114 +388,168 @@ export default function ScanPage() {
               <div className="form-grid">
                 <label>
                   Full name
+
                   <input
                     type="text"
                     value={contact.fullName}
                     onChange={(event) =>
-                      updateContact("fullName", event.target.value)
+                      updateContact(
+                        "fullName",
+                        event.target.value
+                      )
                     }
-                    placeholder="John Smith"
+                    placeholder="Full name"
                     required
                   />
                 </label>
 
                 <label>
                   Company
+
                   <input
                     type="text"
                     value={contact.company}
                     onChange={(event) =>
-                      updateContact("company", event.target.value)
+                      updateContact(
+                        "company",
+                        event.target.value
+                      )
                     }
-                    placeholder="ABC Construction"
+                    placeholder="Company name"
                   />
                 </label>
 
                 <label>
                   Position
+
                   <input
                     type="text"
                     value={contact.jobTitle}
                     onChange={(event) =>
-                      updateContact("jobTitle", event.target.value)
+                      updateContact(
+                        "jobTitle",
+                        event.target.value
+                      )
                     }
-                    placeholder="Director"
+                    placeholder="Job title"
                   />
                 </label>
 
                 <label>
                   Email
+
                   <input
                     type="email"
                     value={contact.email}
                     onChange={(event) =>
-                      updateContact("email", event.target.value)
+                      updateContact(
+                        "email",
+                        event.target.value
+                      )
                     }
-                    placeholder="john@example.com"
+                    placeholder="Email address"
                   />
                 </label>
 
                 <label>
                   Phone
+
                   <input
                     type="tel"
                     value={contact.phone}
                     onChange={(event) =>
-                      updateContact("phone", event.target.value)
+                      updateContact(
+                        "phone",
+                        event.target.value
+                      )
                     }
-                    placeholder="0400 000 000"
+                    placeholder="Phone number"
                   />
                 </label>
 
                 <label>
                   Website
+
                   <input
                     type="text"
                     value={contact.website}
                     onChange={(event) =>
-                      updateContact("website", event.target.value)
+                      updateContact(
+                        "website",
+                        event.target.value
+                      )
                     }
-                    placeholder="example.com.au"
+                    placeholder="Website"
                   />
                 </label>
               </div>
 
               <label>
                 Address
+
                 <input
                   type="text"
                   value={contact.address}
                   onChange={(event) =>
-                    updateContact("address", event.target.value)
+                    updateContact(
+                      "address",
+                      event.target.value
+                    )
                   }
-                  placeholder="Melbourne, Victoria"
+                  placeholder="Business address"
                 />
               </label>
 
               <label>
                 Where did you meet?
+
                 <select
                   value={contact.metAt}
                   onChange={(event) =>
-                    updateContact("metAt", event.target.value)
+                    updateContact(
+                      "metAt",
+                      event.target.value
+                    )
                   }
                 >
-                  <option value="">Select an option</option>
+                  <option value="">
+                    Select an option
+                  </option>
+
                   <option value="BNI">BNI</option>
-                  <option value="Business event">Business event</option>
-                  <option value="Client meeting">Client meeting</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Networking">Networking</option>
-                  <option value="Other">Other</option>
+
+                  <option value="Business event">
+                    Business event
+                  </option>
+
+                  <option value="Client meeting">
+                    Client meeting
+                  </option>
+
+                  <option value="Referral">
+                    Referral
+                  </option>
+
+                  <option value="Networking">
+                    Networking
+                  </option>
+
+                  <option value="Other">
+                    Other
+                  </option>
                 </select>
               </label>
 
               <label>
                 Conversation notes
+
                 <textarea
                   value={contact.notes}
                   onChange={(event) =>
-                    updateContact("notes", event.target.value)
+                    updateContact(
+                      "notes",
+                      event.target.value
+                    )
                   }
                   placeholder="What did you discuss? What should you remember?"
                   rows={4}
@@ -365,7 +565,10 @@ export default function ScanPage() {
                   Start again
                 </button>
 
-                <button type="submit" className="save-contact-button">
+                <button
+                  type="submit"
+                  className="save-contact-button"
+                >
                   Save contact →
                 </button>
               </div>
