@@ -72,17 +72,13 @@ export default function ScanPage() {
 
     setIsReading(true);
 
-    // Temporary animation until n8n and AI are connected.
     window.setTimeout(() => {
       setIsReading(false);
       setShowReview(true);
     }, 1800);
   }
 
-  function updateContact(
-    field: keyof ContactDetails,
-    value: string
-  ) {
+  function updateContact(field: keyof ContactDetails, value: string) {
     setContact((current) => ({
       ...current,
       [field]: value,
@@ -102,7 +98,7 @@ export default function ScanPage() {
 
   function saveContact() {
     if (!contact.fullName.trim()) {
-      alert("Please enter the person's name.");
+      alert("Please enter the person’s name.");
       return;
     }
 
@@ -112,7 +108,7 @@ export default function ScanPage() {
     }
 
     alert(
-      `${contact.fullName} is ready to be saved. Database connection comes next.`
+      `${contact.fullName} is ready to save. We will connect the database next.`
     );
   }
 
@@ -131,8 +127,8 @@ export default function ScanPage() {
           <p className="scan-eyebrow">ARCHZEN CONNECT</p>
           <h1>Scan Business Card</h1>
           <p>
-            Take a clear photo of the card. You can review everything before
-            saving.
+            Take a clear photo of the card. You can check and edit everything
+            before saving.
           </p>
         </div>
       </header>
@@ -150,7 +146,8 @@ export default function ScanPage() {
               <h2>Take or upload a photo</h2>
 
               <p>
-                Position the complete business card inside the photo.
+                Make sure the complete business card is visible and the text is
+                clear.
               </p>
 
               <span>Choose business card</span>
