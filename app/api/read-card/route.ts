@@ -58,12 +58,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const maximumFileSize = 10 * 1024 * 1024;
+    const maximumFileSize = 4 * 1024 * 1024;
 
     if (file.size > maximumFileSize) {
       return NextResponse.json(
         {
-          error: "The business card image must be smaller than 10 MB.",
+          error: "The business card image must be smaller than 4 MB.",
         },
         { status: 400 }
       );
