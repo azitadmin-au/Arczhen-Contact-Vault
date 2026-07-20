@@ -236,9 +236,41 @@ try {
       }
 
       console.log("Saved contact:", data);
+      const followupResponse = await fetch("/api/followup", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    contactId: data.id,
+    firstName:
+      contact.fullName.trim().split(" ")[0] ||
+      contact.fullName.trim(),
+    fullName: contact.fullName.trim(),
+    company: contact.company.trim() || null,
+    jobTitle: contact.jobTitle.trim() || null,
+    email: contact.email.trim().toLowerCase() || null,
+    phone: contact.phone.trim() || null,
+    website: contact.website.trim() || null,
+    address: contact.address.trim() || null,
+    metAt: contact.metAt || null,
+    notes: contact.notes.trim() || null,
+  }),
+});
+
+const followupResult = await followupResponse.json();
+
+if (!followupResponse.ok) {
+  throw new Error(
+    followupResult.error ||
+      "Contact was saved, but the follow-up email could not be sent."
+  );
+}
+
+console.log("Follow-up workflow triggered:", followupResult);
 
       setSuccessMessage(
-        "Contact saved successfully."
+        "Contact saved and follow-up email sent successfully."
       );
     } catch (error) {
       console.error("Save contact error:", error);
